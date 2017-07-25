@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		                http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		                http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
+
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <context:component-scan base-package="morcheca"/>
+
+    <bean id="testDataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="org.hsqldb.jdbcDriver" />
+        <property name="url" value="jdbc:hsqldb:mem:PUBLIC" />
+        <property name="username" value="sa" />
+        <property name="password" value="" />
+    </bean>
+
+    <!-- for logging and asserting SQL queries -->
+    <bean id="proxyDataSource" class="net.ttddyy.dsproxy.support.ProxyDataSource">
+        <property name="dataSource" ref="testDataSource"/>
+        <property name="listener">
+            <bean class="net.ttddyy.dsproxy.listener.ChainListener">
+                <property name="listeners">
+                    <list>
+                        <bean class="net.ttddyy.dsproxy.listener.CommonsQueryLoggingListener">
+                        </bean>
+                        <bean class="net.ttddyy.dsproxy.listener.DataSourceQueryCountListener"/>
+                    </list>
+                </property>
+            </bean>
+        </property>
+    </bean>
+
+    <alias name="proxyDataSource" alias="dataSource"/>
+
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="packagesToScan" value="morcheca.entities"/>
+
+        <property name="hibernateProperties">
+            <props>
+                <!-- Do not perform bean validation on persist time, because password is already encrypted and will fail validation -->
+                <prop key="javax.persistence.validation.group.pre-persist"></prop>
+                <prop key="javax.persistence.validation.group.pre-update"></prop>
+
+                <prop key="hibernate.show_sql">true</prop>
+                <prop key="hibernate.format_sql">false</prop>
+                <prop key="hibernate.cache.use_query_cache">true</prop>
+                <prop key="hibernate.cache.use_second_level_cache">true</prop>
+                <prop key="hibernate.cache.region.factory_class">org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory</prop>
+                <prop key="hibernate.dialect">org.hibernate.dialect.HSQLDialect</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="transactionManager" class="org.springframework.orm.hibernate5.HibernateTransactionManager"
+          p:dataSource-ref="dataSource" p:sessionFactory-ref="sessionFactory"/>
+
+</beans>
